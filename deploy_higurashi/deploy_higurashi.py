@@ -2,8 +2,9 @@ import os
 import shutil
 import subprocess
 import sys
-from sys import argv, stdout
-
+import argparse
+from sys import argv, exit, stdout
+from typing import List
 
 def isWindows():
     return sys.platform == "win32"
@@ -61,12 +62,16 @@ def compileScripts(chapter: ChapterInfo):
         - Windows, Steam UI files
         - Windows, Steam base assets
     """
+    extractKey = os.environ.get('EXTRACT_KEY')
+    if extractKey is None:
+        raise SystemExit("Error: Can't compile scripts as environment variable 'EXTRACT_KEY' not set.")
+
     baseArchiveName = f'{chapter.name}_base.7z'
 
     # - Download and extract the base archive for the selected game, using key
     download(f'https://07th-mod.com/misc/script_building/{baseArchiveName}')
     # Do not replace the below call with sevenZipExtract() as it would expose the 'EXTRACT_KEY'
-    subprocess.call(["7z", "x", baseArchiveName, '-y', f"-p{os.environ['EXTRACT_KEY']}"], shell=isWindows())
+    subprocess.call(["7z", "x", baseArchiveName, '-y', f"-p{extractKey}"], shell=isWindows())
 
     print(f"\n\n>> Compiling [{chapter.name}] scripts...")
     baseFolderName = f'{chapter.name}_base'
@@ -104,8 +109,8 @@ def compileScripts(chapter: ChapterInfo):
 
     os.remove(statusFilename)
 
-    # - Copy the CompiledScriptsUpdate folder to the expected final build dir
-    shutil.copytree(f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts', f'CompiledUpdateScripts', dirs_exist_ok=True)
+    # - Copy the CompiledUpdateScripts folder to the expected final build dir
+    shutil.copytree(f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts', f'temp/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts', dirs_exist_ok=True)
 
     # Clean up
     os.remove(uiArchiveName)
@@ -115,6 +120,54 @@ def compileScripts(chapter: ChapterInfo):
     # Clean up base archive
     os.remove(baseArchiveName)
 
+def prepareFiles(chapterName, dataFolderName):
+    os.makedirs(f'temp/{dataFolderName}/StreamingAssets', exist_ok=True)
+    os.makedirs(f'temp/{dataFolderName}/Managed', exist_ok=True)
+    os.makedirs(f'temp/{dataFolderName}/Plugins', exist_ok=True)
+
+    download(f'https://07th-mod.com/higurashi_dlls/{chapterName}/Assembly-CSharp.dll')
+    print("Downloaded Unity dll")
+    download('https://07th-mod.com/misc/AVProVideo.dll')
+    print("Downloaded video plugin")
+
+
+def buildPatch(chapterName, dataFolderName):
+    # List of all folders used in releases. Dev and misc files are ignored
+    folders = [
+        "CG",
+        "CGAlt",
+        "SE",
+        "voice",
+        "spectrum",
+        "BGM",
+        "Update"
+    ]
+
+    # Iterates the list of folders above looking for valid folders in the master repo
+    for folder in folders:
+        try:
+            shutil.move(f'{folder}', f'temp/{dataFolderName}/StreamingAssets')
+        except:
+            print(f'{folder} not found (this is ok)')
+
+    try:
+        shutil.move(f'tips.json', f'temp/{dataFolderName}')
+    except:
+        print(f'tips.json not found')
+    shutil.move('Assembly-CSharp.dll', f'temp/{dataFolderName}/Managed')
+    shutil.move('AVProVideo.dll', f'temp/{dataFolderName}/Plugins')
+
+
+def makeArchive(chapterName, dataFolderName, gitTag):
+    # Turns the first letter of the chapter name into uppercase for consistency when uploading a release
+    upperChapter = chapterName.capitalize()
+    os.makedirs(f'output', exist_ok=True)
+    shutil.make_archive(base_name=f'output/{upperChapter}.Voice.and.Graphics.Patch.{gitTag}',
+                        format='zip',
+                        root_dir='temp',
+                        base_dir=dataFolderName
+                        )
+
 
 def main():
     if sys.version_info < (3, 8):
@@ -122,17 +175,25 @@ def main():
 
 This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
 
-    help = """Usage:
-            compile_higurashi_scripts.py (onikakushi | watanagashi | tatarigoroshi | himatsubushi | meakashi | tsumihoroboshi | minagoroshi | matsuribayashi)
-           """
+    argparser = argparse.ArgumentParser(usage='deploy_higurashi.py (onikakushi | watanagashi | tatarigoroshi | himatsubushi | meakashi | tsumihoroboshi | minagoroshi | matsuribayashi)',
+                                        description='This script creates the "script" archive used in the Higurashi mod. It expects to be run from the root of one of the Higurashi mod repositories.')
 
-    # Enables the chapter name as an argument. Example: Himatsubushi
-    if len(argv) < 2:
-        raise SystemExit(help)
+    argparser.add_argument("chapter", help="The name of the chapter to be deployed.")
+    argparser.add_argument(
+        "--nocompile",
+        dest="noCompile",
+        action='store_true',
+        help='Skips the script compilation step (archive will not have a CompiledUpdateScripts folder)',
+    )
 
-    chapterName = argv[1]
+    args = argparser.parse_args()
 
-    chapterListA = [
+    # Get Git Tag Environment Variables
+    GIT_REF = os.environ.get("GITHUB_REF",  "unknown/unknown/X.Y.Z")    # Github Tag / Version info
+    GIT_TAG = GIT_REF.split('/')[-1]
+    print(f"--- Starting build for Git Ref: {GIT_REF} Git Tag: {GIT_TAG} ---")
+
+    chapterList = [
         ChapterInfo("onikakushi",       1, "Onikakushi-UI_5.2.2f1_win.7z"),
         ChapterInfo("watanagashi",      2, "Watanagashi-UI_5.2.2f1_win.7z"),
         ChapterInfo("tatarigoroshi",    3, "Tatarigoroshi-UI_5.4.0f1_win.7z"),
@@ -143,16 +204,31 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
         ChapterInfo("matsuribayashi",   8, "Matsuribayashi-UI_2017.2.5_win.7z")
     ]
 
-    chapterDict = dict((chapter.name, chapter) for chapter in chapterListA)
+    chapterDict = dict((chapter.name, chapter) for chapter in chapterList)
 
-    if chapterName not in chapterDict:
-        raise SystemExit(f"Error: Invalid Chapter [{chapterName}]\n\n{help}")
+    chapter = chapterDict.get(args.chapter)
 
-    chapter = chapterDict[chapterName]
+    if chapter is None:
+        raise SystemExit(f"Error: Unknown Chapter '{args.chapter}' Selected\n\n{help}")
 
     # Compile every chapter's scripts before building archives
-    compileScripts(chapter)
+    if not args.noCompile:
+        compileScripts(chapter)
 
+    print(f">>> Creating folders and downloading necessary files")
+    prepareFiles(chapter.name, chapter.dataFolderName)
+
+    print(f">>> Building the patch")
+    buildPatch(chapter.name, chapter.dataFolderName)
+
+    print(f">>> Creating Archive")
+    makeArchive(chapter.name, chapter.dataFolderName, GIT_TAG)
+
+    print(f">>> Cleaning up the mess")
+    shutil.rmtree('temp')
+
+    # Set a Github Actions output "release_name" for use by the release step
+    print(f'::set-output name=release_name::{chapter.name.capitalize()} Voice and Graphics Patch {GIT_TAG}')
 
 if __name__ == "__main__":
     main()
