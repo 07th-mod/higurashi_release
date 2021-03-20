@@ -82,10 +82,8 @@ def compileScripts(chapter: ChapterInfo):
     sevenZipExtract(uiArchiveName, baseFolderName)
 
     # - Download the DLL for the selected game
-    # TODO: when experimental DLL is released, don't use experimental DLL for building
-    dllArchiveName = f'experimental-drojf-dll-ep{chapter.episodeNumber}.7z'
-    download(f'https://github.com/drojf/higurashi-assembly/releases/latest/download/{dllArchiveName}')
-    sevenZipExtract(dllArchiveName, baseFolderName)
+    download(f'https://07th-mod.com/higurashi_dlls/{chapter.name}/Assembly-CSharp.dll')
+    shutil.move('Assembly-CSharp.dll', os.path.join(baseFolderName, chapter.dataFolderName, 'Managed'))
 
     # - Copy the Update folder containing the scripts to be compiled to the base folder, so the game can find it
     shutil.copytree(f'Update', f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/Update', dirs_exist_ok=True)
@@ -114,7 +112,6 @@ def compileScripts(chapter: ChapterInfo):
 
     # Clean up
     os.remove(uiArchiveName)
-    os.remove(dllArchiveName)
     shutil.rmtree(baseFolderName)
 
     # Clean up base archive
