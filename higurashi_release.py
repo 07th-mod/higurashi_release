@@ -74,7 +74,7 @@ def buildPatch(lowerChapterName, dataFolderName):
 def makeArchive(chapterName):
     # Turns the first letter of the chapter name into uppercase for consistency when uploading a release
     upperChapter = chapterName.capitalize()
-    shutil.make_archive(f'{upperChapter}.Voice.and.Graphics.Patch.vX.Y.Z', 'zip', 'temp')
+    shutil.make_archive(f'{upperChapter}.Voice.and.Graphics.Patch', 'zip', 'temp')
 
 
 def cleanUp(lowerChapterName):
