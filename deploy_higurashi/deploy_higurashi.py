@@ -159,7 +159,7 @@ def makeArchive(chapterName, dataFolderName, gitTag):
     # Turns the first letter of the chapter name into uppercase for consistency when uploading a release
     upperChapter = chapterName.capitalize()
     os.makedirs(f'output', exist_ok=True)
-    shutil.make_archive(base_name=f'output/{upperChapter}.Voice.and.Graphics.Patch.{gitTag}',
+    shutil.make_archive(base_name=f'output/{upperChapter}.Voice.and.Graphics.Patch',
                         format='zip',
                         root_dir='temp',
                         base_dir=dataFolderName
