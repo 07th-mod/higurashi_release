@@ -3,6 +3,8 @@ import shutil
 import subprocess
 import sys
 import argparse
+import time
+import traceback
 from sys import argv, exit, stdout
 from typing import List
 
@@ -18,13 +20,22 @@ def call(args, **kwargs):
 
 
 def tryRemoveTree(path):
-    try:
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-        else:
-            os.remove(path)
-    except FileNotFoundError:
-        pass
+    attempts = 5
+    for i in range(attempts):
+        try:
+            if os.path.isdir(path):
+                shutil.rmtree(path)
+            else:
+                os.remove(path)
+            return
+
+        except FileNotFoundError:
+            return
+        except Exception:
+            print(f'Warning: Failed to remove "{path}" attempt {i}/{attempts}')
+            traceback.print_exc()
+
+        time.sleep(1)
 
 
 def sevenZipMakeArchive(input_path, output_filename):
@@ -112,7 +123,7 @@ def compileScripts(chapter: ChapterInfo):
 
     # Clean up
     os.remove(uiArchiveName)
-    shutil.rmtree(baseFolderName)
+    tryRemoveTree(baseFolderName)
 
     # Clean up base archive
     os.remove(baseArchiveName)
@@ -222,7 +233,7 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
     makeArchive(chapter.name, chapter.dataFolderName, GIT_TAG)
 
     print(f">>> Cleaning up the mess")
-    shutil.rmtree('temp')
+    tryRemoveTree('temp')
 
     # Set a Github Actions output "release_name" for use by the release step
     print(f'::set-output name=release_name::{chapter.name.capitalize()} Voice and Graphics Patch {GIT_TAG}')
