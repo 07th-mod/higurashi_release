@@ -1,4 +1,4 @@
-name: Generate Compiled Scripts Pull Request
+name: Generate Release
 
 on:
   - push

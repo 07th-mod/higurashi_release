@@ -1,5 +1,6 @@
 import os
 import shutil
+import string
 import subprocess
 import sys
 import argparse
@@ -75,7 +76,7 @@ def compileScripts(chapter: ChapterInfo):
     """
     extractKey = os.environ.get('EXTRACT_KEY')
     if extractKey is None:
-        raise SystemExit("Error: Can't compile scripts as environment variable 'EXTRACT_KEY' not set.")
+        raise SystemExit("Error: Can't compile scripts as environment variable 'EXTRACT_KEY' not set.\n\nIf running locally on your computer, try skipping compilation with the --nocompile argument.")
 
     baseArchiveName = f'{chapter.name}_base.7z'
 
@@ -168,7 +169,7 @@ def buildPatch(chapterName, dataFolderName):
 
 def makeArchive(chapterName, dataFolderName, gitTag):
     # Turns the first letter of the chapter name into uppercase for consistency when uploading a release
-    upperChapter = chapterName.capitalize()
+    upperChapter = string.capwords(chapterName, '-')
     os.makedirs(f'output', exist_ok=True)
     shutil.make_archive(base_name=f'output/{upperChapter}.Voice.and.Graphics.Patch',
                         format='zip',
@@ -183,7 +184,7 @@ def main():
 
 This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
 
-    argparser = argparse.ArgumentParser(usage='deploy_higurashi.py (onikakushi | watanagashi | tatarigoroshi | himatsubushi | meakashi | tsumihoroboshi | minagoroshi | matsuribayashi)',
+    argparser = argparse.ArgumentParser(usage='deploy_higurashi.py (onikakushi | watanagashi | tatarigoroshi | himatsubushi | meakashi | tsumihoroboshi | minagoroshi | matsuribayashi | higurashi-rei)',
                                         description='This script creates the "script" archive used in the Higurashi mod. It expects to be run from the root of one of the Higurashi mod repositories.')
 
     argparser.add_argument("chapter", help="The name of the chapter to be deployed.")
@@ -237,7 +238,8 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
     tryRemoveTree('temp')
 
     # Set a Github Actions output "release_name" for use by the release step
-    print(f'::set-output name=release_name::{chapter.name.capitalize()} Voice and Graphics Patch {GIT_TAG}')
+    capitalized_name = string.capwords(chapter.name, '-')
+    print(f'::set-output name=release_name::{capitalized_name} Voice and Graphics Patch {GIT_TAG}')
 
 if __name__ == "__main__":
     main()
