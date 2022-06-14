@@ -209,7 +209,8 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
         ChapterInfo("meakashi",         5, "Meakashi-UI_5.5.3p3_win.7z"),
         ChapterInfo("tsumihoroboshi",   6, "Tsumihoroboshi-UI_5.5.3p3_win.7z"),
         ChapterInfo("minagoroshi",      7, "Minagoroshi-UI_5.6.7f1_win.7z"),
-        ChapterInfo("matsuribayashi",   8, "Matsuribayashi-UI_2017.2.5_win.7z")
+        ChapterInfo("matsuribayashi",   8, "Matsuribayashi-UI_2017.2.5_win.7z"),
+        ChapterInfo("higurashi-rei",    9, "Rei-UI_2019.4.36_win.7z")
     ]
 
     chapterDict = dict((chapter.name, chapter) for chapter in chapterList)
