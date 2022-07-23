@@ -54,7 +54,7 @@ def sevenZipExtract(input_path, outputDir=None):
 
 def download(url):
     print(f"Starting download of URL: {url}")
-    call(['curl', '-OJL', url])
+    call(['curl', '-OJLf', url])
 
 
 class ChapterInfo:
