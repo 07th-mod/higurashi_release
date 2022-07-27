@@ -222,7 +222,7 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
     if chapter is None:
         if args.chapter.lower() == 'higurashi-rei':
             print(f"Converting chapter argument '{args.chapter}' to 'rei'")
-            chapter = 'rei'
+            chapter = chapterDict.get('rei')
 
     if chapter is None:
         raise SystemExit(f"Error: Unknown Chapter '{args.chapter}' Selected\n\n{help}")
