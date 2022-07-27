@@ -184,7 +184,7 @@ def main():
 
 This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
 
-    argparser = argparse.ArgumentParser(usage='deploy_higurashi.py (onikakushi | watanagashi | tatarigoroshi | himatsubushi | meakashi | tsumihoroboshi | minagoroshi | matsuribayashi | higurashi-rei)',
+    argparser = argparse.ArgumentParser(usage='deploy_higurashi.py (onikakushi | watanagashi | tatarigoroshi | himatsubushi | meakashi | tsumihoroboshi | minagoroshi | matsuribayashi | [higurashi-rei/rei])',
                                         description='This script creates the "script" archive used in the Higurashi mod. It expects to be run from the root of one of the Higurashi mod repositories.')
 
     argparser.add_argument("chapter", help="The name of the chapter to be deployed.")
@@ -217,6 +217,12 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
     chapterDict = dict((chapter.name, chapter) for chapter in chapterList)
 
     chapter = chapterDict.get(args.chapter)
+
+    # Add special case for Higurashi Rei as the repo name doesn't match the chapter name
+    if chapter is None:
+        if args.chapter.lower() == 'higurashi-rei':
+            print(f"Converting chapter argument '{args.chapter}' to 'rei'")
+            chapter = 'rei'
 
     if chapter is None:
         raise SystemExit(f"Error: Unknown Chapter '{args.chapter}' Selected\n\n{help}")
