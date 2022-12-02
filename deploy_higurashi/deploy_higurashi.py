@@ -12,13 +12,12 @@ from typing import List
 def isWindows():
     return sys.platform == "win32"
 
-
 def call(args, **kwargs):
     print("running: {}".format(args))
     retcode = subprocess.call(args, shell=isWindows(), **kwargs)  # use shell on windows
     if retcode != 0:
-        raise SystemExit(retcode)
-
+        # don't print args here to avoid leaking secrets
+        raise Exception("ERROR: The last call() failed with retcode {retcode}")
 
 def tryRemoveTree(path):
     attempts = 5
@@ -76,9 +75,7 @@ def compileScripts(chapter: ChapterInfo):
     """
     extractKey = os.environ.get('EXTRACT_KEY')
     if not extractKey.strip():
-        err = "Error: Can't compile scripts as environment variable 'EXTRACT_KEY' not set or empty.\n\nNOTE: This script cannot be run on a PR currently\n\nIf running locally on your computer, try skipping compilation with the --nocompile argument."
-        print(err)
-        raise SystemExit(err)
+        raise Exception("Error: Can't compile scripts as environment variable 'EXTRACT_KEY' not set or empty.\n\nNOTE: This script cannot be run on a PR currently!!\n\nIf running locally on your computer, try skipping compilation with the --nocompile argument.")
 
     baseArchiveName = f'{chapter.name}_base.7z'
 
@@ -87,10 +84,7 @@ def compileScripts(chapter: ChapterInfo):
     # Do not replace the below call with sevenZipExtract() as it would expose the 'EXTRACT_KEY'
     retcode = subprocess.call(["7z", "x", baseArchiveName, '-y', f"-p{extractKey}"], shell=isWindows())
     if retcode != 0:
-        # don't print args here to avoid leaking secrets
-        err = "ERROR: Extraction of base archive failed with retcode {retcode}"
-        print(err)
-        raise SystemExit(err)
+        raise Exception("ERROR: Extraction of base archive failed with retcode {retcode}")
 
     print(f"\n\n>> Compiling [{chapter.name}] scripts...")
     baseFolderName = f'{chapter.name}_base'
@@ -117,12 +111,12 @@ def compileScripts(chapter: ChapterInfo):
 
     # - Check compile status file
     if not os.path.exists(statusFilename):
-        raise SystemExit("Script Compile Failed: Script compilation status file not found")
+        raise Exception("Script Compile Failed: Script compilation status file not found")
 
     with open(statusFilename, "r") as f:
         status = f.read().strip()
         if status != "Compile OK":
-            raise SystemExit(f"Script Compile Failed: Script compilation status indicated status {status}")
+            raise Exception(f"Script Compile Failed: Script compilation status indicated status {status}")
 
     os.remove(statusFilename)
 
@@ -187,7 +181,7 @@ def makeArchive(chapterName, dataFolderName, gitTag):
 
 def main():
     if sys.version_info < (3, 8):
-        raise SystemExit(f"""ERROR: This script requires Python >= 3.8 to run (you have {sys.version_info.major}.{sys.version_info.minor})!
+        raise Exception(f"""ERROR: This script requires Python >= 3.8 to run (you have {sys.version_info.major}.{sys.version_info.minor})!
 
 This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
 
@@ -232,7 +226,7 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
             chapter = chapterDict.get('rei')
 
     if chapter is None:
-        raise SystemExit(f"Error: Unknown Chapter '{args.chapter}' Selected\n\n{help}")
+        raise Exception(f"Error: Unknown Chapter '{args.chapter}' Selected\n\n{help}")
 
     # Compile every chapter's scripts before building archives
     if not args.noCompile:
