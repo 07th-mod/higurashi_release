@@ -83,7 +83,12 @@ def compileScripts(chapter: ChapterInfo):
     # - Download and extract the base archive for the selected game, using key
     download(f'https://07th-mod.com/misc/script_building/{baseArchiveName}')
     # Do not replace the below call with sevenZipExtract() as it would expose the 'EXTRACT_KEY'
-    subprocess.call(["7z", "x", baseArchiveName, '-y', f"-p{extractKey}"], shell=isWindows())
+    retcode = subprocess.call(["7z", "x", baseArchiveName, '-y', f"-p{extractKey}"], shell=isWindows())
+    if retcode != 0:
+        # don't print args here to avoid leaking secrets
+        err = "ERROR: Extraction of base archive failed with retcode {retcode}"
+        print(err)
+        raise SystemExit(err)
 
     print(f"\n\n>> Compiling [{chapter.name}] scripts...")
     baseFolderName = f'{chapter.name}_base'
