@@ -6,6 +6,7 @@ import sys
 import argparse
 import time
 import traceback
+import glob
 from sys import argv, exit, stdout
 from typing import List
 
@@ -57,12 +58,13 @@ def download(url):
 
 
 class ChapterInfo:
-    def __init__(self, name, episodeNumber, uiFileName):
+    def __init__(self, name, episodeNumber, uiFileName, baseName=None, dllFolderName=None):
         self.name = name
         self.episodeNumber = episodeNumber
         self.dataFolderName = f'HigurashiEp{episodeNumber:02}_Data'
         self.uiArchiveName = uiFileName
-
+        self.baseName = baseName if baseName is not None else self.name
+        self.dllFolderName = dllFolderName if dllFolderName is not None else self.name
 
 def compileScripts(chapter: ChapterInfo):
     """
@@ -77,7 +79,8 @@ def compileScripts(chapter: ChapterInfo):
     if not extractKey.strip():
         raise Exception("Error: Can't compile scripts as environment variable 'EXTRACT_KEY' not set or empty.\n\nNOTE: This script cannot be run on a PR currently!!\n\nIf running locally on your computer, try skipping compilation with the --nocompile argument.")
 
-    baseArchiveName = f'{chapter.name}_base.7z'
+    baseArchiveName = f'{chapter.baseName}_base.7z'
+    baseFolderName = f'{chapter.baseName}_base'
 
     # - Download and extract the base archive for the selected game, using key
     download(f'https://07th-mod.com/misc/script_building/{baseArchiveName}')
@@ -87,7 +90,6 @@ def compileScripts(chapter: ChapterInfo):
         raise Exception("ERROR: Extraction of base archive failed with retcode {retcode}")
 
     print(f"\n\n>> Compiling [{chapter.name}] scripts...")
-    baseFolderName = f'{chapter.name}_base'
 
     # - Download and extract the UI archive for the selected game
     uiArchiveName = chapter.uiArchiveName
@@ -95,7 +97,7 @@ def compileScripts(chapter: ChapterInfo):
     sevenZipExtract(uiArchiveName, baseFolderName)
 
     # - Download the DLL for the selected game
-    download(f'https://07th-mod.com/higurashi_dlls/{chapter.name}/Assembly-CSharp.dll')
+    download(f'https://07th-mod.com/higurashi_dlls/{chapter.dllFolderName}/Assembly-CSharp.dll')
     shutil.move('Assembly-CSharp.dll', os.path.join(baseFolderName, chapter.dataFolderName, 'Managed'))
 
     # - Copy the Update folder containing the scripts to be compiled to the base folder, so the game can find it
@@ -130,18 +132,18 @@ def compileScripts(chapter: ChapterInfo):
     # Clean up base archive
     os.remove(baseArchiveName)
 
-def prepareFiles(chapterName, dataFolderName):
+def prepareFiles(dllFolderName, dataFolderName):
     os.makedirs(f'temp/{dataFolderName}/StreamingAssets', exist_ok=True)
     os.makedirs(f'temp/{dataFolderName}/Managed', exist_ok=True)
     os.makedirs(f'temp/{dataFolderName}/Plugins', exist_ok=True)
 
-    download(f'https://07th-mod.com/higurashi_dlls/{chapterName}/Assembly-CSharp.dll')
+    download(f'https://07th-mod.com/higurashi_dlls/{dllFolderName}/Assembly-CSharp.dll')
     print("Downloaded Unity dll")
     download('https://07th-mod.com/misc/AVProVideo.dll')
     print("Downloaded video plugin")
 
 
-def buildPatch(chapterName, dataFolderName):
+def buildPatch(dataFolderName):
     # List of all folders used in releases. Dev and misc files are ignored
     folders = [
         "CG",
@@ -160,15 +162,16 @@ def buildPatch(chapterName, dataFolderName):
         except:
             print(f'{folder} not found (this is ok)')
 
-    try:
-        shutil.move(f'tips.json', f'temp/{dataFolderName}')
-    except:
-        print(f'tips.json not found')
+    # Copy all top level .json files
+    for jsonFilePath in glob.glob('./*.json'):
+        print(f"Moving {jsonFilePath} to data folder...")
+        shutil.move(jsonFilePath, f'temp/{dataFolderName}')
+
     shutil.move('Assembly-CSharp.dll', f'temp/{dataFolderName}/Managed')
     shutil.move('AVProVideo.dll', f'temp/{dataFolderName}/Plugins')
 
 
-def makeArchive(chapterName, dataFolderName, gitTag):
+def makeArchive(chapterName, dataFolderName):
     # Turns the first letter of the chapter name into uppercase for consistency when uploading a release
     upperChapter = string.capwords(chapterName, '-')
     os.makedirs(f'output', exist_ok=True)
@@ -185,7 +188,7 @@ def main():
 
 This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
 
-    argparser = argparse.ArgumentParser(usage='deploy_higurashi.py (onikakushi | watanagashi | tatarigoroshi | himatsubushi | meakashi | tsumihoroboshi | minagoroshi | matsuribayashi | [higurashi-rei/rei])',
+    argparser = argparse.ArgumentParser(usage='deploy_higurashi.py (onikakushi | watanagashi | tatarigoroshi | himatsubushi | meakashi | tsumihoroboshi | minagoroshi | matsuribayashi | [higurashi-rei/rei] | console)',
                                         description='This script creates the "script" archive used in the Higurashi mod. It expects to be run from the root of one of the Higurashi mod repositories.')
 
     argparser.add_argument("chapter", help="The name of the chapter to be deployed.")
@@ -208,6 +211,7 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
         ChapterInfo("watanagashi",      2, "Watanagashi-UI_5.2.2f1_win.7z"),
         ChapterInfo("tatarigoroshi",    3, "Tatarigoroshi-UI_5.4.0f1_win.7z"),
         ChapterInfo("himatsubushi",     4, "Himatsubushi-UI_5.4.1f1_win.7z"),
+        ChapterInfo("console",          4, "Himatsubushi-UI_5.4.1f1_win.7z", baseName="himatsubushi", dllFolderName="consolearcs"), # Console uses same base archive as Himatsubushi
         ChapterInfo("meakashi",         5, "Meakashi-UI_5.5.3p3_win.7z"),
         ChapterInfo("tsumihoroboshi",   6, "Tsumihoroboshi-UI_5.5.3p3_win.7z"),
         ChapterInfo("minagoroshi",      7, "Minagoroshi-UI_5.6.7f1_win.7z"),
@@ -233,13 +237,13 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
         compileScripts(chapter)
 
     print(f">>> Creating folders and downloading necessary files")
-    prepareFiles(chapter.name, chapter.dataFolderName)
+    prepareFiles(chapter.dllFolderName, chapter.dataFolderName)
 
     print(f">>> Building the patch")
-    buildPatch(chapter.name, chapter.dataFolderName)
+    buildPatch(chapter.dataFolderName)
 
     print(f">>> Creating Archive")
-    makeArchive(chapter.name, chapter.dataFolderName, GIT_TAG)
+    makeArchive(chapter.name, chapter.dataFolderName)
 
     print(f">>> Cleaning up the mess")
     tryRemoveTree('temp')
