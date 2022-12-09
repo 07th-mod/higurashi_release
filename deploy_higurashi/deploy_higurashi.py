@@ -144,31 +144,42 @@ def prepareFiles(dllFolderName, dataFolderName):
 
 
 def buildPatch(dataFolderName):
-    # List of all folders used in releases. Dev and misc files are ignored
-    folders = [
-        "CG",
-        "CGAlt",
-        "SE",
-        "voice",
-        "spectrum",
-        "BGM",
-        "Update"
-    ]
+    shutil.move('Assembly-CSharp.dll', f'temp/{dataFolderName}/Managed/Assembly-CSharp.dll')
+    shutil.move('AVProVideo.dll', f'temp/{dataFolderName}/Plugins/AVProVideo.dll')
 
-    # Iterates the list of folders above looking for valid folders in the master repo
-    for folder in folders:
-        try:
-            shutil.move(f'{folder}', f'temp/{dataFolderName}/StreamingAssets')
-        except:
-            print(f'{folder} not found (this is ok)')
+    # Except for certain ignored files, copy everything in the current directory to the 'temp/Higurashi_Ep0X/StreamingAssets' folder
+    source_folder = '.'
 
-    # Copy all top level .json files
-    for jsonFilePath in glob.glob('./*.json'):
-        print(f"Moving {jsonFilePath} to data folder...")
-        shutil.move(jsonFilePath, f'temp/{dataFolderName}')
+    def ignoreFilter(folderPath, folderContents):
+        ignoreList = [
+            '.git',
+            '.github',
+            '.gitignore',
+            'readme.md',
+            'deploy_higurashi.py',
+            'dev',
+            'temp',
+            'output',
+            dataFolderName
+        ]
 
-    shutil.move('Assembly-CSharp.dll', f'temp/{dataFolderName}/Managed')
-    shutil.move('AVProVideo.dll', f'temp/{dataFolderName}/Plugins')
+        ignored_children = []
+
+        for child in folderContents:
+            fullPath = os.path.join(folderPath, child)
+            realPath = os.path.realpath(fullPath)
+            relPath = os.path.relpath(realPath, start=source_folder)
+            nPath = os.path.normcase(os.path.normpath(relPath))
+            if nPath in ignoreList:
+                ignored_children.append(child)
+
+        for child in ignored_children:
+            print(f' - Ignored [{child}]')
+
+        return ignored_children
+
+    print("Copying files, but ignoring the following paths:")
+    shutil.copytree(source_folder, f'temp/{dataFolderName}/StreamingAssets', ignore=ignoreFilter, dirs_exist_ok=True)
 
 
 def makeArchive(chapterName, dataFolderName):
