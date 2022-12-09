@@ -155,6 +155,7 @@ def buildPatch(dataFolderName):
             '.git',
             '.github',
             '.gitignore',
+            '.gitconfig',
             'readme.md',
             'deploy_higurashi.py',
             'dev',
