@@ -187,6 +187,11 @@ def buildPatch(dataFolderName):
 def makeArchive(chapterName, dataFolderName):
     # Turns the first letter of the chapter name into uppercase for consistency when uploading a release
     upperChapter = string.capwords(chapterName, '-')
+
+    # Console arcs archive name is different from chapter name
+    if chapterName == 'console':
+        upperChapter = 'ConsoleArcs'
+
     os.makedirs(f'output', exist_ok=True)
     shutil.make_archive(base_name=f'output/{upperChapter}.Voice.and.Graphics.Patch',
                         format='zip',
