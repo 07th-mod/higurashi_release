@@ -200,7 +200,7 @@ def main():
 
 This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
 
-    argparser = argparse.ArgumentParser(usage='deploy_higurashi.py (onikakushi | watanagashi | tatarigoroshi | himatsubushi | meakashi | tsumihoroboshi | minagoroshi | matsuribayashi | [higurashi-rei/rei] | console)',
+    argparser = argparse.ArgumentParser(usage='deploy_higurashi.py (onikakushi | watanagashi | tatarigoroshi | himatsubushi | meakashi | tsumihoroboshi | minagoroshi | matsuribayashi | [higurashi-rei/rei] | [higurashi-console-arcs/console])',
                                         description='This script creates the "script" archive used in the Higurashi mod. It expects to be run from the root of one of the Higurashi mod repositories.')
 
     argparser.add_argument("chapter", help="The name of the chapter to be deployed.")
@@ -240,6 +240,12 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
         if args.chapter.lower() == 'higurashi-rei':
             print(f"Converting chapter argument '{args.chapter}' to 'rei'")
             chapter = chapterDict.get('rei')
+
+    # Add special case for Console as repo name doesn't match chapter name
+    if chapter is None:
+        if args.chapter.lower() == 'higurashi-console-arcs':
+            print(f"Converting chapter argument '{args.chapter}' to 'console'")
+            chapter = chapterDict.get('console')
 
     if chapter is None:
         raise Exception(f"Error: Unknown Chapter '{args.chapter}' Selected\n\n{help}")
