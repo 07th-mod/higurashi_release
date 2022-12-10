@@ -161,6 +161,7 @@ def buildPatch(dataFolderName):
             'dev',
             'temp',
             'output',
+            'src',
             dataFolderName
         ]
 
