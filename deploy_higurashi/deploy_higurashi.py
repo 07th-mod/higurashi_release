@@ -76,7 +76,7 @@ def compileScripts(chapter: ChapterInfo):
         - Windows, Steam base assets
     """
     extractKey = os.environ.get('EXTRACT_KEY')
-    if not extractKey.strip():
+    if not extractKey or not extractKey.strip():
         raise Exception("Error: Can't compile scripts as environment variable 'EXTRACT_KEY' not set or empty.\n\nNOTE: This script cannot be run on a PR currently!!\n\nIf running locally on your computer, try skipping compilation with the --nocompile argument.")
 
     baseArchiveName = f'{chapter.baseName}_base.7z'
