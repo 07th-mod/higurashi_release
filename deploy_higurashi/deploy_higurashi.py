@@ -75,7 +75,7 @@ def compileScripts(chapter: ChapterInfo):
         - Windows, Steam UI files
         - Windows, Steam base assets
     """
-    extractKey = os.environ.get('EXTRACT_KEY')
+    extractKey = os.environ.get('HIGURASHI_BASE_EXTRACT_KEY')
     if not extractKey or not extractKey.strip():
         raise Exception("Error: Can't compile scripts as environment variable 'EXTRACT_KEY' not set or empty.\n\nNOTE: This script cannot be run on a PR currently!!\n\nIf running locally on your computer, try skipping compilation with the --nocompile argument.")
 
