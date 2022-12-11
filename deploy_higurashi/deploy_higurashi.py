@@ -274,7 +274,9 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
 
     # Set a Github Actions output "release_name" for use by the release step
     capitalized_name = string.capwords(chapter.name, '-')
-    print(f'::set-output name=release_name::{capitalized_name} Voice and Graphics Patch {GIT_TAG}')
+    GITHUB_OUTPUT = os.environ.get("GITHUB_OUTPUT", "github-output-dummy.txt")
+    with open(GITHUB_OUTPUT, "w") as f:
+        f.write(f"release_name={capitalized_name} Voice and Graphics Patch {GIT_TAG}")
 
 if __name__ == "__main__":
     main()
