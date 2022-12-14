@@ -75,16 +75,17 @@ def compileScripts(chapter: ChapterInfo):
         - Windows, Steam UI files
         - Windows, Steam base assets
     """
-    extractKey = os.environ.get('HIGURASHI_BASE_EXTRACT_KEY')
-    if not extractKey or not extractKey.strip():
-        raise Exception("Error: Can't compile scripts as environment variable 'EXTRACT_KEY' not set or empty.\n\nNOTE: This script cannot be run on a PR currently!!\n\nIf running locally on your computer, try skipping compilation with the --nocompile argument.")
+    keyName = 'HIGURASHI_BASE_EXTRACT_KEY'
+    extractKey = os.environ.get(keyName, '')
+    if not extractKey.strip():
+        raise Exception(f"Error: Can't compile scripts as environment variable '{keyName}' not set or empty.\n\nNOTE: This script cannot be run on a PR currently!!\n\nIf running locally on your computer, try skipping compilation with the --nocompile argument.")
 
     baseArchiveName = f'{chapter.baseName}_base.7z'
     baseFolderName = f'{chapter.baseName}_base'
 
     # - Download and extract the base archive for the selected game, using key
     download(f'https://07th-mod.com/misc/script_building/{baseArchiveName}')
-    # Do not replace the below call with sevenZipExtract() as it would expose the 'EXTRACT_KEY'
+    # Do not replace the below call with sevenZipExtract() as it would expose the extraction key
     retcode = subprocess.call(["7z", "x", baseArchiveName, '-y', f"-p{extractKey}"], shell=isWindows())
     if retcode != 0:
         raise Exception("ERROR: Extraction of base archive failed with retcode {retcode}")
