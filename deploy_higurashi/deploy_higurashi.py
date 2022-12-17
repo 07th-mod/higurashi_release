@@ -148,6 +148,8 @@ def buildPatch(dataFolderName):
     shutil.move('Assembly-CSharp.dll', f'temp/{dataFolderName}/Managed/Assembly-CSharp.dll')
     shutil.move('AVProVideo.dll', f'temp/{dataFolderName}/Plugins/AVProVideo.dll')
 
+    rootJSONFiles = glob.glob('*.json')
+
     # Except for certain ignored files, copy everything in the current directory to the 'temp/Higurashi_Ep0X/StreamingAssets' folder
     source_folder = '.'
 
@@ -173,7 +175,7 @@ def buildPatch(dataFolderName):
             realPath = os.path.realpath(fullPath)
             relPath = os.path.relpath(realPath, start=source_folder)
             nPath = os.path.normcase(os.path.normpath(relPath))
-            if nPath in ignoreList:
+            if nPath in ignoreList or nPath in rootJSONFiles:
                 ignored_children.append(child)
 
         for child in ignored_children:
@@ -181,8 +183,14 @@ def buildPatch(dataFolderName):
 
         return ignored_children
 
-    print("Copying files, but ignoring the following paths:")
+    print("Copying files to StreamingAssets folder, but ignoring the following paths:")
     shutil.copytree(source_folder, f'temp/{dataFolderName}/StreamingAssets', ignore=ignoreFilter, dirs_exist_ok=True)
+
+    # Copy all top level .json files
+    print("Copying top level *.json files...")
+    for jsonFilePath in rootJSONFiles:
+        print(f"Copying {jsonFilePath} to data folder...")
+        shutil.copy(jsonFilePath, f'temp/{dataFolderName}')
 
 
 def makeArchive(chapterName, dataFolderName):
