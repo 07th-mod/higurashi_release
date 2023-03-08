@@ -97,9 +97,8 @@ def compileScripts(chapter: ChapterInfo):
     download(f'https://07th-mod.com/rikachama/ui/{uiArchiveName}')
     sevenZipExtract(uiArchiveName, baseFolderName)
 
-    # - Download the DLL for the selected game
-    download(f'https://07th-mod.com/higurashi_dlls/{chapter.dllFolderName}/Assembly-CSharp.dll')
-    shutil.move('Assembly-CSharp.dll', os.path.join(baseFolderName, chapter.dataFolderName, 'Managed'))
+    # - Copy in the modded DLL (must be generated in a previous build step)
+    shutil.copy('Assembly-CSharp.dll', os.path.join(baseFolderName, chapter.dataFolderName, 'Managed'))
 
     # - Copy the Update folder containing the scripts to be compiled to the base folder, so the game can find it
     shutil.copytree(f'Update', f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/Update', dirs_exist_ok=True)
@@ -138,15 +137,19 @@ def prepareFiles(dllFolderName, dataFolderName):
     os.makedirs(f'temp/{dataFolderName}/Managed', exist_ok=True)
     os.makedirs(f'temp/{dataFolderName}/Plugins', exist_ok=True)
 
-    download(f'https://07th-mod.com/higurashi_dlls/{dllFolderName}/Assembly-CSharp.dll')
-    print("Downloaded Unity dll")
     download('https://07th-mod.com/misc/AVProVideo.dll')
     print("Downloaded video plugin")
 
 
 def buildPatch(dataFolderName):
+	# Note: The modded DLL must be generated in a previous build step
     shutil.move('Assembly-CSharp.dll', f'temp/{dataFolderName}/Managed/Assembly-CSharp.dll')
     shutil.move('AVProVideo.dll', f'temp/{dataFolderName}/Plugins/AVProVideo.dll')
+
+    try:
+        shutil.move('Assembly-CSharp.version.txt', f'temp/{dataFolderName}/Managed/Assembly-CSharp.version.txt')
+    except:
+        print("Warning: Failed to copy DLL version information file 'Assembly-CSharp.version.txt'")
 
     rootJSONFiles = glob.glob('*.json')
 
