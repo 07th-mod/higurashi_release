@@ -97,6 +97,10 @@ def compileScripts(chapter: ChapterInfo):
         - Windows, Steam UI files
         - Windows, Steam base assets
     """
+
+    if not os.path.exists('Assembly-CSharp.dll'):
+        raise Exception("Missing Assembly-CSharp.dll - if running script manually, you must put it next to this script!")
+
     keyName = 'HIGURASHI_BASE_EXTRACT_KEY'
     extractKey = os.environ.get(keyName, '')
     if not extractKey.strip():
@@ -115,9 +119,10 @@ def compileScripts(chapter: ChapterInfo):
     print(f"\n\n>> Compiling [{chapter.name}] scripts...")
 
     # - Download and extract the UI archive for the selected game
-    uiArchiveName = chapter.uiArchiveName
-    download(f'https://07th-mod.com/rikachama/ui/{uiArchiveName}')
-    sevenZipExtract(uiArchiveName, baseFolderName)
+    if chapter.uiArchiveName:
+        uiArchiveName = chapter.uiArchiveName
+        download(f'https://07th-mod.com/rikachama/ui/{uiArchiveName}')
+        sevenZipExtract(uiArchiveName, baseFolderName)
 
     # - Copy in the modded DLL (must be generated in a previous build step)
     shutil.copy('Assembly-CSharp.dll', os.path.join(baseFolderName, chapter.dataFolderName, 'Managed'))
@@ -148,7 +153,8 @@ def compileScripts(chapter: ChapterInfo):
     shutil.copytree(f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts', f'temp/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts', dirs_exist_ok=True)
 
     # Clean up
-    os.remove(uiArchiveName)
+    if chapter.uiArchiveName:
+        os.remove(uiArchiveName)
     tryRemoveTree(baseFolderName)
 
     # Clean up base archive
@@ -240,7 +246,7 @@ def main():
 
 This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
 
-    argparser = argparse.ArgumentParser(usage='deploy_higurashi.py (onikakushi | watanagashi | tatarigoroshi | himatsubushi | meakashi | tsumihoroboshi | minagoroshi | matsuribayashi | [higurashi-rei/rei] | [higurashi-console-arcs/console])',
+    argparser = argparse.ArgumentParser(usage='deploy_higurashi.py (onikakushi | watanagashi | tatarigoroshi | himatsubushi | meakashi | tsumihoroboshi | minagoroshi | matsuribayashi | [higurashi-rei/rei] | [hou-pluse/hou] | [higurashi-console-arcs/console])',
                                         description='This script creates the "script" archive used in the Higurashi mod. It expects to be run from the root of one of the Higurashi mod repositories.')
 
     argparser.add_argument("chapter", help="The name of the chapter to be deployed.")
@@ -270,20 +276,26 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
         ChapterInfo("tsumihoroboshi",   6, "Tsumihoroboshi-UI_5.5.3p3_win.7z"),
         ChapterInfo("minagoroshi",      7, "Minagoroshi-UI_5.6.7f1_win.7z"),
         ChapterInfo("matsuribayashi",   8, "Matsuribayashi-UI_2017.2.5_win.7z"),
-        ChapterInfo("rei",              9, "Rei-UI_2019.4.3_win.7z")
+        ChapterInfo("rei",              9, "Rei-UI_2019.4.3_win.7z"),
+        # TODO: Remove UI files from https://07th-mod.com/misc/script_building/hou_base.7z archive, and use mod UI file
+        ChapterInfo("hou",             10, None), #"Hou-UI_2019.4.3_win.7z") # Skip Hou UI for now
     ]
 
     chapterDict = dict((chapter.name, chapter) for chapter in chapterList)
 
     chapter = chapterDict.get(args.chapter)
 
-    # Add special case for Higurashi Rei as the repo name doesn't match the chapter name
+    # Add special case for chapters where the repo name doesn't match the chapter name
     if chapter is None:
         if args.chapter.lower() == 'higurashi-rei':
             print(f"Converting chapter argument '{args.chapter}' to 'rei'")
             chapter = chapterDict.get('rei')
 
-    # Add special case for Console as repo name doesn't match chapter name
+    if chapter is None:
+        if args.chapter.lower() == 'hou-plus':
+            print(f"Converting chapter argument '{args.chapter}' to 'hou'")
+            chapter = chapterDict.get('hou')
+
     if chapter is None:
         if args.chapter.lower() == 'higurashi-console-arcs':
             print(f"Converting chapter argument '{args.chapter}' to 'console'")
