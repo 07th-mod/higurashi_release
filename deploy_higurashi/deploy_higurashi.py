@@ -10,6 +10,28 @@ import glob
 from sys import argv, exit, stdout
 from typing import List
 
+class Globals:
+    SEVEN_ZIP_EXECUTABLE = None
+
+def findWorkingExecutablePath(executable_paths, flags):
+	#type: (List[str], List[str]) -> str
+	"""
+	Try to execute each path in executable_paths to see which one can be called and returns exit code 0
+	The 'flags' argument is any extra flags required to make the executable return 0 exit code
+	:param executable_paths: a list [] of possible executable paths (eg. "./7za", "7z")
+	:param flags: a list [] of any extra flags like "-h" required to make the executable have a 0 exit code
+	:return: the path of the valid executable, or None if no valid executables found
+	"""
+	with open(os.devnull, 'w') as os_devnull:
+		for path in executable_paths:
+			try:
+				if subprocess.call([path] + flags, stdout=os_devnull, stderr=os_devnull) == 0:
+					return path
+			except:
+				pass
+
+	return None
+
 def isWindows():
     return sys.platform == "win32"
 
@@ -41,11 +63,11 @@ def tryRemoveTree(path):
 
 def sevenZipMakeArchive(input_path, output_filename):
     tryRemoveTree(output_filename)
-    call(["7z", "a", output_filename, input_path])
+    call([Globals.SEVEN_ZIP_EXECUTABLE, "a", output_filename, input_path])
 
 
 def sevenZipExtract(input_path, outputDir=None):
-    args = ["7z", "x", input_path, '-y']
+    args = [Globals.SEVEN_ZIP_EXECUTABLE, "x", input_path, '-y']
     if outputDir:
         args.append('-o' + outputDir)
 
@@ -86,7 +108,7 @@ def compileScripts(chapter: ChapterInfo):
     # - Download and extract the base archive for the selected game, using key
     download(f'https://07th-mod.com/misc/script_building/{baseArchiveName}')
     # Do not replace the below call with sevenZipExtract() as it would expose the extraction key
-    retcode = subprocess.call(["7z", "x", baseArchiveName, '-y', f"-p{extractKey}"], shell=isWindows())
+    retcode = subprocess.call([Globals.SEVEN_ZIP_EXECUTABLE, "x", baseArchiveName, '-y', f"-p{extractKey}"], shell=isWindows())
     if retcode != 0:
         raise Exception("ERROR: Extraction of base archive failed with retcode {retcode}")
 
@@ -230,6 +252,8 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
     )
 
     args = argparser.parse_args()
+
+    Globals.SEVEN_ZIP_EXECUTABLE = findWorkingExecutablePath(["7za", "7z"], ['-h'])
 
     # Get Git Tag Environment Variables
     GIT_REF = os.environ.get("GITHUB_REF",  "unknown/unknown/X.Y.Z")    # Github Tag / Version info
