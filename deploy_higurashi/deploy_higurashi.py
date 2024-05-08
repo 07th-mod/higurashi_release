@@ -144,7 +144,8 @@ def compileScripts(chapter: ChapterInfo):
 
     with open(statusFilename, "r") as f:
         status = f.read().strip()
-        if status != "Compile OK":
+        print(f'Game Script Compile Result: {status}')
+        if not status.startswith("Compile OK"):
             raise Exception(f"Script Compile Failed: Script compilation status indicated status {status}")
 
     os.remove(statusFilename)
