@@ -84,8 +84,13 @@ class ChapterInfo:
         self.name = name
         self.episodeNumber = episodeNumber
         self.dataFolderName = f'HigurashiEp{episodeNumber:02}_Data'
-        self.uiArchiveURL = uiArchiveURL
-        self.uiArchiveName = uiArchiveURL.split('/')[-1]
+        if uiArchiveURL:
+            self.uiArchiveURL = uiArchiveURL
+            self.uiArchiveName = uiArchiveURL.split('/')[-1]
+        else:
+            self.uiArchiveURL = None
+            self.uiArchiveName = None
+
         self.baseName = baseName if baseName is not None else self.name
         self.dllFolderName = dllFolderName if dllFolderName is not None else self.name
 
@@ -120,7 +125,7 @@ def compileScripts(chapter: ChapterInfo):
     print(f"\n\n>> Compiling [{chapter.name}] scripts...")
 
     # - Download and extract the UI archive for the selected game
-    if chapter.uiArchiveName:
+    if chapter.uiArchiveName and chapter.uiArchiveURL:
         uiArchiveName = chapter.uiArchiveName
         download(chapter.uiArchiveURL)
         sevenZipExtract(uiArchiveName, baseFolderName)
