@@ -80,11 +80,12 @@ def download(url):
 
 
 class ChapterInfo:
-    def __init__(self, name, episodeNumber, uiFileName, baseName=None, dllFolderName=None):
+    def __init__(self, name, episodeNumber, uiArchiveURL: str, baseName=None, dllFolderName=None):
         self.name = name
         self.episodeNumber = episodeNumber
         self.dataFolderName = f'HigurashiEp{episodeNumber:02}_Data'
-        self.uiArchiveName = uiFileName
+        self.uiArchiveURL = uiArchiveURL
+        self.uiArchiveName = uiArchiveURL.split('/')[-1]
         self.baseName = baseName if baseName is not None else self.name
         self.dllFolderName = dllFolderName if dllFolderName is not None else self.name
 
@@ -110,7 +111,7 @@ def compileScripts(chapter: ChapterInfo):
     baseFolderName = f'{chapter.baseName}_base'
 
     # - Download and extract the base archive for the selected game, using key
-    download(f'https://07th-mod.com/misc/script_building/{baseArchiveName}')
+    download(f'https://github.com/22FF2YV1Rq/compile-scripts/releases/latest/download/{baseArchiveName}')
     # Do not replace the below call with sevenZipExtract() as it would expose the extraction key
     retcode = subprocess.call([Globals.SEVEN_ZIP_EXECUTABLE, "x", baseArchiveName, '-y', f"-p{extractKey}"], shell=isWindows())
     if retcode != 0:
@@ -121,7 +122,7 @@ def compileScripts(chapter: ChapterInfo):
     # - Download and extract the UI archive for the selected game
     if chapter.uiArchiveName:
         uiArchiveName = chapter.uiArchiveName
-        download(f'https://07th-mod.com/rikachama/ui/{uiArchiveName}')
+        download(chapter.uiArchiveURL)
         sevenZipExtract(uiArchiveName, baseFolderName)
 
     # - Copy in the modded DLL (must be generated in a previous build step)
@@ -166,7 +167,7 @@ def prepareFiles(dllFolderName, dataFolderName):
     os.makedirs(f'temp/{dataFolderName}/Managed', exist_ok=True)
     os.makedirs(f'temp/{dataFolderName}/Plugins', exist_ok=True)
 
-    download('https://07th-mod.com/misc/AVProVideo.dll')
+    download('https://github.com/22FF2YV1Rq/compile-scripts/releases/latest/download/AVProVideo.dll')
     print("Downloaded video plugin")
 
 
@@ -268,16 +269,16 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
     print(f"--- Starting build for Git Ref: {GIT_REF} Git Tag: {GIT_TAG} ---")
 
     chapterList = [
-        ChapterInfo("onikakushi",       1, "Onikakushi-UI_5.2.2f1_win.7z"),
-        ChapterInfo("watanagashi",      2, "Watanagashi-UI_5.2.2f1_win.7z"),
-        ChapterInfo("tatarigoroshi",    3, "Tatarigoroshi-UI_5.4.0f1_win.7z"),
-        ChapterInfo("himatsubushi",     4, "Himatsubushi-UI_5.4.1f1_win.7z"),
-        ChapterInfo("console",          4, "Himatsubushi-UI_5.4.1f1_win.7z", baseName="himatsubushi", dllFolderName="consolearcs"), # Console uses same base archive as Himatsubushi
-        ChapterInfo("meakashi",         5, "Meakashi-UI_5.5.3p3_win.7z"),
-        ChapterInfo("tsumihoroboshi",   6, "Tsumihoroboshi-UI_5.5.3p3_win.7z"),
-        ChapterInfo("minagoroshi",      7, "Minagoroshi-UI_5.6.7f1_win.7z"),
-        ChapterInfo("matsuribayashi",   8, "Matsuribayashi-UI_2017.2.5_win.7z"),
-        ChapterInfo("rei",              9, "Rei-UI_2019.4.3_win.7z"),
+        ChapterInfo("onikakushi",       1, "https://github.com/07th-mod/patch-releases/releases/download/onikakushi-v1.0/Onikakushi-UI_5.2.2f1_win.7z"),
+        ChapterInfo("watanagashi",      2, "https://github.com/07th-mod/patch-releases/releases/download/watanagashi-v1.0/Watanagashi-UI_5.2.2f1_win.7z"),
+        ChapterInfo("tatarigoroshi",    3, "https://github.com/07th-mod/patch-releases/releases/download/tatarigoroshi-v1.0/Tatarigoroshi-UI_5.4.0f1_win.7z"),
+        ChapterInfo("himatsubushi",     4, "https://github.com/07th-mod/patch-releases/releases/download/himatsubushi-v1.0/Himatsubushi-UI_5.4.1f1_win.7z"),
+        ChapterInfo("console",          4, "https://github.com/07th-mod/patch-releases/releases/download/himatsubushi-v1.0/Himatsubushi-UI_5.4.1f1_win.7z", baseName="himatsubushi", dllFolderName="consolearcs"), # Console uses same base archive as Himatsubushi
+        ChapterInfo("meakashi",         5, "https://github.com/07th-mod/patch-releases/releases/download/meakashi-v1.0/Meakashi-UI_5.5.3p3_win.7z"),
+        ChapterInfo("tsumihoroboshi",   6, "https://github.com/07th-mod/patch-releases/releases/download/tsumihoroboshi-v1.0/Tsumihoroboshi-UI_5.5.3p3_win.7z"),
+        ChapterInfo("minagoroshi",      7, "https://github.com/07th-mod/patch-releases/releases/download/minagoroshi-v1.0/Minagoroshi-UI_5.6.7f1_win.7z"),
+        ChapterInfo("matsuribayashi",   8, "https://github.com/07th-mod/patch-releases/releases/download/matsuribayashi-v1.0/Matsuribayashi-UI_2017.2.5_win.7z"),
+        ChapterInfo("rei",              9, "https://github.com/07th-mod/patch-releases/releases/download/rei-v1.0/Rei-UI_2019.4.3_win.7z"),
         # TODO: Remove UI files from https://07th-mod.com/misc/script_building/hou_base.7z archive, and use mod UI file
         ChapterInfo("hou",             10, None), #"Hou-UI_2019.4.3_win.7z") # Skip Hou UI for now
     ]
