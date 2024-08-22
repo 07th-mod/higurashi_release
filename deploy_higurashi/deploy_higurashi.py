@@ -106,7 +106,7 @@ def compileScripts(chapter: ChapterInfo):
     scriptCompilerPath = os.path.abspath(f'bin/ScriptCompiler/HigurashiScriptCompiler.exe')
 
     if not os.path.exists(scriptCompilerPath):
-        raise Exception("Missing HigurashiScriptCompiler.exe - if running script manually, you must put it next to this script!")
+        raise Exception(f"Missing {scriptCompilerPath} - if running script manually, you must put it there yourself!")
 
     baseFolderName = f'{chapter.baseName}_base'
 
