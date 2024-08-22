@@ -40,7 +40,7 @@ def call(args, **kwargs):
     retcode = subprocess.call(args, shell=isWindows(), **kwargs)  # use shell on windows
     if retcode != 0:
         # don't print args here to avoid leaking secrets
-        raise Exception("ERROR: The last call() failed with retcode {retcode}")
+        raise Exception(f"ERROR: The last call() failed with retcode {retcode}")
 
 def tryRemoveTree(path):
     attempts = 5
@@ -99,42 +99,24 @@ def compileScripts(chapter: ChapterInfo):
     Compiles scripts for the given chapter.
 
     Expects:
-        - to run on a Windows machine
-        - Windows, Steam UI files
-        - Windows, Steam base assets
+        - HigurashiScriptCompiler.exe placed adjacent to this script (built from the current chapter's engine code)
+        - Associated DLLs (Antlr3.Runtime.dll, System.Core.dll (might not be required, but include to be safe))
     """
 
-    if not os.path.exists('Assembly-CSharp.dll'):
-        raise Exception("Missing Assembly-CSharp.dll - if running script manually, you must put it next to this script!")
+    if not os.path.exists('HigurashiScriptCompiler.exe'):
+        raise Exception("Missing HigurashiScriptCompiler.exe - if running script manually, you must put it next to this script!")
 
-    keyName = 'HIGURASHI_BASE_EXTRACT_KEY'
-    extractKey = os.environ.get(keyName, '')
-    if not extractKey.strip():
-        raise Exception(f"Error: Can't compile scripts as environment variable '{keyName}' not set or empty.\n\nNOTE: This script cannot be run on a PR currently!!\n\nIf running locally on your computer, try skipping compilation with the --nocompile argument.")
-
-    baseArchiveName = f'{chapter.baseName}_base.7z'
     baseFolderName = f'{chapter.baseName}_base'
-
-    # - Download and extract the base archive for the selected game, using key
-    download(f'https://github.com/22FF2YV1Rq/compile-scripts/releases/latest/download/{baseArchiveName}')
-    # Do not replace the below call with sevenZipExtract() as it would expose the extraction key
-    retcode = subprocess.call([Globals.SEVEN_ZIP_EXECUTABLE, "x", baseArchiveName, '-y', f"-p{extractKey}"], shell=isWindows())
-    if retcode != 0:
-        raise Exception("ERROR: Extraction of base archive failed with retcode {retcode}")
 
     print(f"\n\n>> Compiling [{chapter.name}] scripts...")
 
-    # - Download and extract the UI archive for the selected game
-    if chapter.uiArchiveName and chapter.uiArchiveURL:
-        uiArchiveName = chapter.uiArchiveName
-        download(chapter.uiArchiveURL)
-        sevenZipExtract(uiArchiveName, baseFolderName)
-
-    # - Copy in the modded DLL (must be generated in a previous build step)
-    shutil.copy('Assembly-CSharp.dll', os.path.join(baseFolderName, chapter.dataFolderName, 'Managed'))
+    # - Define the folder where the update scripts are stored, and where they will be compiled to
+    compileSrcFolder = f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/Update'
+    compileDestFolder = f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts'
+    os.makedirs(compileDestFolder, exist_ok=True)
 
     # - Copy the Update folder containing the scripts to be compiled to the base folder, so the game can find it
-    shutil.copytree(f'Update', f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/Update', dirs_exist_ok=True)
+    shutil.copytree(f'Update', compileSrcFolder, dirs_exist_ok=True)
 
     # - Remove status file if it exists
     statusFilename = "higu_script_compile_status.txt"
@@ -142,7 +124,7 @@ def compileScripts(chapter: ChapterInfo):
         os.remove(statusFilename)
 
     # - Run the game with 'quitaftercompile' as argument
-    call([f'{baseFolderName}\\HigurashiEp{chapter.episodeNumber:02}.exe', 'quitaftercompile'])
+    call([f'HigurashiScriptCompiler.exe', compileSrcFolder, compileDestFolder])
 
     # - Check compile status file
     if not os.path.exists(statusFilename):
@@ -157,22 +139,17 @@ def compileScripts(chapter: ChapterInfo):
     os.remove(statusFilename)
 
     # - Copy the CompiledUpdateScripts folder to the expected final build dir
-    shutil.copytree(f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts', f'temp/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts', dirs_exist_ok=True)
+    shutil.copytree(compileDestFolder, f'temp/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts', dirs_exist_ok=True)
 
     # Clean up
-    if chapter.uiArchiveName:
-        os.remove(uiArchiveName)
     tryRemoveTree(baseFolderName)
-
-    # Clean up base archive
-    os.remove(baseArchiveName)
 
 def prepareFiles(dllFolderName, dataFolderName):
     os.makedirs(f'temp/{dataFolderName}/StreamingAssets', exist_ok=True)
     os.makedirs(f'temp/{dataFolderName}/Managed', exist_ok=True)
     os.makedirs(f'temp/{dataFolderName}/Plugins', exist_ok=True)
 
-    download('https://github.com/22FF2YV1Rq/compile-scripts/releases/latest/download/AVProVideo.dll')
+    download('https://github.com/07th-mod/patch-releases/releases/download/developer-v1.0/AVProVideo.dll')
     print("Downloaded video plugin")
 
 
