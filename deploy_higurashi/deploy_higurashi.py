@@ -102,8 +102,11 @@ def compileScripts(chapter: ChapterInfo):
         - HigurashiScriptCompiler.exe placed adjacent to this script (built from the current chapter's engine code)
         - Associated DLLs (Antlr3.Runtime.dll, System.Core.dll (might not be required, but include to be safe))
     """
+    scriptCompilerFolder = f'bin/ScriptCompiler/'
+    scriptCompilerName = f'HigurashiScriptCompiler.exe'
+    scriptCompilerPath = os.path.join(scriptCompilerFolder, scriptCompilerName)
 
-    if not os.path.exists('HigurashiScriptCompiler.exe'):
+    if not os.path.exists(scriptCompilerPath):
         raise Exception("Missing HigurashiScriptCompiler.exe - if running script manually, you must put it next to this script!")
 
     baseFolderName = f'{chapter.baseName}_base'
@@ -111,32 +114,33 @@ def compileScripts(chapter: ChapterInfo):
     print(f"\n\n>> Compiling [{chapter.name}] scripts...")
 
     # - Define the folder where the update scripts are stored, and where they will be compiled to
-    compileSrcFolder = f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/Update'
-    compileDestFolder = f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts'
+    compileSrcFolder = os.path.abspath(f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/Update')
+    compileDestFolder = os.path.abspath(f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts')
     os.makedirs(compileDestFolder, exist_ok=True)
 
     # - Copy the Update folder containing the scripts to be compiled to the base folder, so the game can find it
     shutil.copytree(f'Update', compileSrcFolder, dirs_exist_ok=True)
 
     # - Remove status file if it exists
-    statusFilename = "higu_script_compile_status.txt"
-    if os.path.exists(statusFilename):
-        os.remove(statusFilename)
+    statusFilePath = os.path.join(scriptCompilerFolder, "higu_script_compile_status.txt")
+    if os.path.exists(statusFilePath):
+        os.remove(statusFilePath)
 
     # - Run the game with 'quitaftercompile' as argument
-    call([f'HigurashiScriptCompiler.exe', compileSrcFolder, compileDestFolder])
+    # Note: generated artifacts currently exclude the 'bin' folder
+    call([scriptCompilerName, compileSrcFolder, compileDestFolder], cwd=scriptCompilerFolder)
 
     # - Check compile status file
-    if not os.path.exists(statusFilename):
+    if not os.path.exists(statusFilePath):
         raise Exception("Script Compile Failed: Script compilation status file not found")
 
-    with open(statusFilename, "r") as f:
+    with open(statusFilePath, "r") as f:
         status = f.read().strip()
         print(f'Game Script Compile Result: {status}')
         if not status.startswith("Compile OK"):
             raise Exception(f"Script Compile Failed: Script compilation status indicated status {status}")
 
-    os.remove(statusFilename)
+    os.remove(statusFilePath)
 
     # - Copy the CompiledUpdateScripts folder to the expected final build dir
     shutil.copytree(compileDestFolder, f'temp/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts', dirs_exist_ok=True)
@@ -149,17 +153,21 @@ def prepareFiles(dllFolderName, dataFolderName):
     os.makedirs(f'temp/{dataFolderName}/Managed', exist_ok=True)
     os.makedirs(f'temp/{dataFolderName}/Plugins', exist_ok=True)
 
-    download('https://github.com/07th-mod/patch-releases/releases/download/developer-v1.0/AVProVideo.dll')
-    print("Downloaded video plugin")
-
 
 def buildPatch(dataFolderName):
 	# Note: The modded DLL must be generated in a previous build step
-    shutil.move('Assembly-CSharp.dll', f'temp/{dataFolderName}/Managed/Assembly-CSharp.dll')
-    shutil.move('AVProVideo.dll', f'temp/{dataFolderName}/Plugins/AVProVideo.dll')
+    shutil.copy('bin/Release/Assembly-CSharp.dll', f'temp/{dataFolderName}/Managed/Assembly-CSharp.dll')
+
+    print("Downloading video plugin...")
+    if os.path.exists('AVProVideo.dll'):
+        os.remove('AVProVideo.dll')
+    download('https://github.com/07th-mod/patch-releases/releases/download/developer-v1.0/AVProVideo.dll')
+    tempVideoDLLPath = f'temp/{dataFolderName}/Plugins/AVProVideo.dll'
+    print(f"Moving video plugin to {tempVideoDLLPath}...")
+    shutil.move('AVProVideo.dll', tempVideoDLLPath)
 
     try:
-        shutil.move('Assembly-CSharp.version.txt', f'temp/{dataFolderName}/Managed/Assembly-CSharp.version.txt')
+        shutil.copy('bin/Release/Assembly-CSharp.version.txt', f'temp/{dataFolderName}/Managed/Assembly-CSharp.version.txt')
     except:
         print("Warning: Failed to copy DLL version information file 'Assembly-CSharp.version.txt'")
 
