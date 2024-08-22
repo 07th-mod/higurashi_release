@@ -1,4 +1,5 @@
 import os
+import stat
 import shutil
 import string
 import subprocess
@@ -102,7 +103,7 @@ def compileScripts(chapter: ChapterInfo):
         - HigurashiScriptCompiler.exe placed adjacent to this script (built from the current chapter's engine code)
         - Associated DLLs (Antlr3.Runtime.dll, System.Core.dll (might not be required, but include to be safe))
     """
-    scriptCompilerPath = f'bin/ScriptCompiler/HigurashiScriptCompiler.exe'
+    scriptCompilerPath = os.path.abspath(f'bin/ScriptCompiler/HigurashiScriptCompiler.exe')
 
     if not os.path.exists(scriptCompilerPath):
         raise Exception("Missing HigurashiScriptCompiler.exe - if running script manually, you must put it next to this script!")
@@ -124,9 +125,13 @@ def compileScripts(chapter: ChapterInfo):
     if os.path.exists(statusFilePath):
         os.remove(statusFilePath)
 
+    # Make sure script compiler is executable
+    st = os.stat(scriptCompilerPath)
+    os.chmod(scriptCompilerPath, st.st_mode | stat.S_IEXEC)
+
     # - Run the game with 'quitaftercompile' as argument
     # Note: generated artifacts currently exclude the 'bin' folder
-    call([os.path.abspath(scriptCompilerPath), compileSrcFolder, compileDestFolder])
+    call([scriptCompilerPath, compileSrcFolder, compileDestFolder])
 
     # - Check compile status file
     if not os.path.exists(statusFilePath):
