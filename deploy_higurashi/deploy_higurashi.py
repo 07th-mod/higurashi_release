@@ -180,6 +180,7 @@ def buildPatch(dataFolderName):
     source_folder = '.'
 
     def ignoreFilter(folderPath, folderContents):
+        # Case is ignored for these paths!
         ignoreList = [
             '.git',
             '.github',
@@ -191,8 +192,12 @@ def buildPatch(dataFolderName):
             'temp',
             'output',
             'src',
+            'bin',
+            'dll',
             dataFolderName
-        ]
+        ] #type: list[str]
+
+        ignoreList = [p.lower() for p in ignoreList]
 
         ignored_children = []
 
@@ -201,7 +206,7 @@ def buildPatch(dataFolderName):
             realPath = os.path.realpath(fullPath)
             relPath = os.path.relpath(realPath, start=source_folder)
             nPath = os.path.normcase(os.path.normpath(relPath))
-            if nPath in ignoreList or nPath in rootJSONFiles:
+            if nPath.lower() in ignoreList or nPath in rootJSONFiles:
                 ignored_children.append(child)
 
         for child in ignored_children:
