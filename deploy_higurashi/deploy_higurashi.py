@@ -36,7 +36,7 @@ def isWindows():
     return sys.platform == "win32"
 
 def call(args, **kwargs):
-    print("running: {}".format(args))
+    print(f"running: {args} kwargs: {kwargs}")
     retcode = subprocess.call(args, shell=isWindows(), **kwargs)  # use shell on windows
     if retcode != 0:
         # don't print args here to avoid leaking secrets
@@ -102,9 +102,7 @@ def compileScripts(chapter: ChapterInfo):
         - HigurashiScriptCompiler.exe placed adjacent to this script (built from the current chapter's engine code)
         - Associated DLLs (Antlr3.Runtime.dll, System.Core.dll (might not be required, but include to be safe))
     """
-    scriptCompilerFolder = f'bin/ScriptCompiler/'
-    scriptCompilerName = f'HigurashiScriptCompiler.exe'
-    scriptCompilerPath = os.path.join(scriptCompilerFolder, scriptCompilerName)
+    scriptCompilerPath = f'bin/ScriptCompiler/HigurashiScriptCompiler.exe'
 
     if not os.path.exists(scriptCompilerPath):
         raise Exception("Missing HigurashiScriptCompiler.exe - if running script manually, you must put it next to this script!")
@@ -122,13 +120,13 @@ def compileScripts(chapter: ChapterInfo):
     shutil.copytree(f'Update', compileSrcFolder, dirs_exist_ok=True)
 
     # - Remove status file if it exists
-    statusFilePath = os.path.join(scriptCompilerFolder, "higu_script_compile_status.txt")
+    statusFilePath = f'higu_script_compile_status.txt'
     if os.path.exists(statusFilePath):
         os.remove(statusFilePath)
 
     # - Run the game with 'quitaftercompile' as argument
     # Note: generated artifacts currently exclude the 'bin' folder
-    call([scriptCompilerName, compileSrcFolder, compileDestFolder], cwd=scriptCompilerFolder)
+    call([os.path.abspath(scriptCompilerPath), compileSrcFolder, compileDestFolder])
 
     # - Check compile status file
     if not os.path.exists(statusFilePath):
