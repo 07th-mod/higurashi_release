@@ -310,7 +310,7 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
     capitalized_name = string.capwords(datadirname, '-')
     GITHUB_OUTPUT = os.environ.get("GITHUB_OUTPUT", "github-output-dummy.txt")
     with open(GITHUB_OUTPUT, "w") as f:
-        f.write(f"release_name={capitalized_name} Voice and Graphics Patch {GIT_TAG}")
+        f.write(f"release_name={output_archive_name} {GIT_TAG}")
 
 if __name__ == "__main__":
     main()
