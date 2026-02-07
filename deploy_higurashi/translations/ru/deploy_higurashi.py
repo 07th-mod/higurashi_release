@@ -65,7 +65,7 @@ def tryRemoveTree(path):
 
 def sevenZipMakeArchive(input_path, output_filename):
     tryRemoveTree(output_filename)
-    call([Globals.SEVEN_ZIP_EXECUTABLE, "a", output_filename, input_path])
+    call([Globals.SEVEN_ZIP_EXECUTABLE, "a", "-md=512m", output_filename, input_path, ])
 
 
 def sevenZipExtract(input_path, outputDir=None, filter=None):
