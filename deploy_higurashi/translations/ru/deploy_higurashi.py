@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import re
 import stat
 import shutil
 import string
@@ -10,13 +11,13 @@ import time
 import traceback
 import glob
 from sys import argv, exit, stdout
-from typing import List
+from typing import List, Optional
 
 class Globals:
-    SEVEN_ZIP_EXECUTABLE = None
+    SEVEN_ZIP_EXECUTABLE : Optional[str] = None
 
 def findWorkingExecutablePath(executable_paths, flags):
-	#type: (List[str], List[str]) -> str
+	#type: (List[str], List[str]) -> Optional[str]
 	"""
 	Try to execute each path in executable_paths to see which one can be called and returns exit code 0
 	The 'flags' argument is any extra flags required to make the executable return 0 exit code
@@ -85,7 +86,7 @@ def download(url):
 
 
 class ChapterInfo:
-    def __init__(self, name, episodeNumber, uiArchiveURL: str, baseName=None, dllFolderName=None):
+    def __init__(self, name, episodeNumber, uiArchiveURL: Optional[str], baseName=None, dllFolderName=None):
         self.name = name
         self.episodeNumber = episodeNumber
         self.dataFolderName = f'HigurashiEp{episodeNumber:02}_Data'
@@ -99,61 +100,70 @@ class ChapterInfo:
         self.baseName = baseName if baseName is not None else self.name
         self.dllFolderName = dllFolderName if dllFolderName is not None else self.name
 
-# def compileScripts(chapter: ChapterInfo):
-#     """
-#     Compiles scripts for the given chapter.
+# The generated CompiledUpdateScripts folder will be put inside compiledUpdateScriptsOutPath
+def compileScripts(chapter: ChapterInfo, updateFolderPath: Optional[str] = None, compiledUpdateScriptsOutPath: Optional[str] = None):
+    """
+    Compiles scripts for the given chapter.
 
-#     Expects:
-#         - HigurashiScriptCompiler.exe placed adjacent to this script (built from the current chapter's engine code)
-#         - Associated DLLs (Antlr3.Runtime.dll, System.Core.dll (might not be required, but include to be safe))
-#     """
-#     scriptCompilerPath = os.path.abspath(f'bin/ScriptCompiler/HigurashiScriptCompiler.exe')
+    Expects:
+        - HigurashiScriptCompiler.exe placed adjacent to this script (built from the current chapter's engine code)
+        - Associated DLLs (Antlr3.Runtime.dll, System.Core.dll (might not be required, but include to be safe))
+    """
+    scriptCompilerPath = os.path.abspath(f'bin/ScriptCompiler/HigurashiScriptCompiler.exe')
 
-#     if not os.path.exists(scriptCompilerPath):
-#         raise Exception(f"Missing {scriptCompilerPath} - if running script manually, you must put it there yourself!")
+    if not os.path.exists(scriptCompilerPath):
+        raise Exception(f"Missing {scriptCompilerPath} - if running script manually, you must put it there yourself!")
 
-#     baseFolderName = f'{chapter.baseName}_base'
+    baseFolderName = f'{chapter.baseName}_base'
 
-#     print(f"\n\n>> Compiling [{chapter.name}] scripts...")
+    print(f"\n\n>> Compiling [{chapter.name}] scripts...")
 
-#     # - Define the folder where the update scripts are stored, and where they will be compiled to
-#     compileSrcFolder = os.path.abspath(f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/Update')
-#     compileDestFolder = os.path.abspath(f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts')
-#     os.makedirs(compileDestFolder, exist_ok=True)
+    # - Define the folder where the update scripts are stored, and where they will be compiled to
+    compileSrcFolder = os.path.abspath(f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/Update')
 
-#     # - Copy the Update folder containing the scripts to be compiled to the base folder, so the game can find it
-#     shutil.copytree(f'Update', compileSrcFolder, dirs_exist_ok=True)
+    compileDestFolder = os.path.abspath(f'{baseFolderName}/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts')
+    os.makedirs(compileDestFolder, exist_ok=True)
 
-#     # - Remove status file if it exists
-#     statusFilePath = f'higu_script_compile_status.txt'
-#     if os.path.exists(statusFilePath):
-#         os.remove(statusFilePath)
+    # - Copy the Update folder containing the scripts to be compiled to the base folder, so the game can find it
+    updateFolder = 'Update'
+    if updateFolderPath is not None:
+         updateFolder = updateFolderPath
 
-#     # Make sure script compiler is executable
-#     st = os.stat(scriptCompilerPath)
-#     os.chmod(scriptCompilerPath, st.st_mode | stat.S_IEXEC)
+    shutil.copytree(updateFolder, compileSrcFolder, dirs_exist_ok=True)
 
-#     # - Run the game with 'quitaftercompile' as argument
-#     # Note: generated artifacts currently exclude the 'bin' folder
-#     call([scriptCompilerPath, compileSrcFolder, compileDestFolder])
+    # - Remove status file if it exists
+    statusFilePath = f'higu_script_compile_status.txt'
+    if os.path.exists(statusFilePath):
+        os.remove(statusFilePath)
 
-#     # - Check compile status file
-#     if not os.path.exists(statusFilePath):
-#         raise Exception("Script Compile Failed: Script compilation status file not found")
+    # Make sure script compiler is executable
+    st = os.stat(scriptCompilerPath)
+    os.chmod(scriptCompilerPath, st.st_mode | stat.S_IEXEC)
 
-#     with open(statusFilePath, "r") as f:
-#         status = f.read().strip()
-#         print(f'Game Script Compile Result: {status}')
-#         if not status.startswith("Compile OK"):
-#             raise Exception(f"Script Compile Failed: Script compilation status indicated status {status}")
+    # - Run the game with 'quitaftercompile' as argument
+    # Note: generated artifacts currently exclude the 'bin' folder
+    call([scriptCompilerPath, compileSrcFolder, compileDestFolder])
 
-#     os.remove(statusFilePath)
+    # - Check compile status file
+    if not os.path.exists(statusFilePath):
+        raise Exception("Script Compile Failed: Script compilation status file not found")
 
-#     # - Copy the CompiledUpdateScripts folder to the expected final build dir
-#     shutil.copytree(compileDestFolder, f'temp/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts', dirs_exist_ok=True)
+    with open(statusFilePath, "r") as f:
+        status = f.read().strip()
+        print(f'Game Script Compile Result: {status}')
+        if not status.startswith("Compile OK"):
+            raise Exception(f"Script Compile Failed: Script compilation status indicated status {status}")
 
-#     # Clean up
-#     tryRemoveTree(baseFolderName)
+    os.remove(statusFilePath)
+
+    # - Copy the CompiledUpdateScripts folder to the expected final build dir
+    outPath = f'temp/{chapter.dataFolderName}/StreamingAssets/CompiledUpdateScripts'
+    if compiledUpdateScriptsOutPath is not None:
+         outPath = f'{compiledUpdateScriptsOutPath}/CompiledUpdateScripts'
+    shutil.copytree(compileDestFolder, outPath, dirs_exist_ok=True)
+
+    # Clean up
+    tryRemoveTree(baseFolderName)
 
 # def prepareFiles(dllFolderName, dataFolderName):
 #     os.makedirs(f'temp/{dataFolderName}/StreamingAssets', exist_ok=True)
@@ -267,7 +277,36 @@ This script uses 3.8's 'dirs_exist_ok=True' argument for shutil.copy.""")
     # The name of the data directory for this chapter, for example 'HigurashiEp01_Data'
     datadirname = datadirs[0].name
 
+    chapterNumber = int(re.sub(r'[^\d]', '', datadirname))
+
     print(f"Generating release for {datadirname}")
+
+    # Determine the chapter based on the datadir name
+    chapterList = [
+        ChapterInfo("onikakushi",       1, "https://github.com/07th-mod/patch-releases/releases/download/onikakushi-v1.0/Onikakushi-UI_5.2.2f1_win.7z"),
+        ChapterInfo("watanagashi",      2, "https://github.com/07th-mod/patch-releases/releases/download/watanagashi-v1.0/Watanagashi-UI_5.2.2f1_win.7z"),
+        ChapterInfo("tatarigoroshi",    3, "https://github.com/07th-mod/patch-releases/releases/download/tatarigoroshi-v1.0/Tatarigoroshi-UI_5.4.0f1_win.7z"),
+        ChapterInfo("himatsubushi",     4, "https://github.com/07th-mod/patch-releases/releases/download/himatsubushi-v1.0/Himatsubushi-UI_5.4.1f1_win.7z"),
+        ChapterInfo("console",          4, "https://github.com/07th-mod/patch-releases/releases/download/himatsubushi-v1.0/Himatsubushi-UI_5.4.1f1_win.7z", baseName="himatsubushi", dllFolderName="consolearcs"), # Console uses same base archive as Himatsubushi
+        ChapterInfo("meakashi",         5, "https://github.com/07th-mod/patch-releases/releases/download/meakashi-v1.0/Meakashi-UI_5.5.3p3_win.7z"),
+        ChapterInfo("tsumihoroboshi",   6, "https://github.com/07th-mod/patch-releases/releases/download/tsumihoroboshi-v1.0/Tsumihoroboshi-UI_5.5.3p3_win.7z"),
+        ChapterInfo("minagoroshi",      7, "https://github.com/07th-mod/patch-releases/releases/download/minagoroshi-v1.0/Minagoroshi-UI_5.6.7f1_win.7z"),
+        ChapterInfo("matsuribayashi",   8, "https://github.com/07th-mod/patch-releases/releases/download/matsuribayashi-v1.0/Matsuribayashi-UI_2017.2.5_win.7z"),
+        ChapterInfo("rei",              9, "https://github.com/07th-mod/patch-releases/releases/download/rei-v1.0/Rei-UI_2019.4.3_win.7z"),
+        # TODO: Remove UI files from https://07th-mod.com/misc/script_building/hou_base.7z archive, and use mod UI file
+        ChapterInfo("hou",             10, None), #"Hou-UI_2019.4.3_win.7z") # Skip Hou UI for now
+    ]
+
+    chapterDict = dict((chapter.episodeNumber, chapter) for chapter in chapterList)
+
+    chapter = chapterDict.get(chapterNumber)
+
+    if chapter is None:
+        raise Exception(f"Error: Unknown Chapter from datadirname: '{datadirname}' Selected\n\n{help}")
+
+    # Compile scripts before building archives. This should generate 'CompiledUpdateScripts'
+    # in the root folder (next to the 'Update' folder in the repo where Github Actions is running)
+    compileScripts(chapter, updateFolderPath=f'{datadirname}/StreamingAssets/Update',  compiledUpdateScriptsOutPath=f'{datadirname}/StreamingAssets/')
 
     # Download the global translation UI file
     all_ru_translation_archive_url = 'https://github.com/07th-mod/ui-editing-scripts/releases/download/russian_v1.0.0_all/translation.7z'
