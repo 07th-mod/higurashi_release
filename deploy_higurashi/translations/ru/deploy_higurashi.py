@@ -111,6 +111,10 @@ def compileScripts(chapter: ChapterInfo, updateFolderPath: Optional[str] = None,
     """
     scriptCompilerPath = os.path.abspath(f'bin/ScriptCompiler/HigurashiScriptCompiler.exe')
 
+    # Unsure if linux compiles without the .exe extension?
+    if not os.path.exists(scriptCompilerPath):
+        scriptCompilerPath = os.path.abspath(f'bin/ScriptCompiler/HigurashiScriptCompiler')
+
     if not os.path.exists(scriptCompilerPath):
         raise Exception(f"Missing {scriptCompilerPath} - if running script manually, you must put it there yourself!")
 
